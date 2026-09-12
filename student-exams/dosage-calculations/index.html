@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Interactive Nursing Dosage Calculations</title>
+<style>
+  :root{
+    --bg:#f4f8ff;
+    --card:#ffffff;
+    --ink:#17223b;
+    --muted:#63708a;
+    --blue:#2563eb;
+    --purple:#7c3aed;
+    --pink:#db2777;
+    --green:#15803d;
+    --red:#b91c1c;
+    --line:#dbe5f5;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:Arial, Helvetica, sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(circle at top left, rgba(37,99,235,.14), transparent 28%),
+      radial-gradient(circle at top right, rgba(124,58,237,.13), transparent 28%),
+      var(--bg);
+  }
+  .wrap{max-width:980px;margin:0 auto;padding:24px}
+  .hero{
+    background:linear-gradient(135deg,#1d4ed8,#7c3aed 58%,#db2777);
+    color:white;border-radius:24px;padding:28px;
+    box-shadow:0 16px 40px rgba(31,41,55,.14);
+  }
+  .hero h1{margin:0 0 8px;font-size:clamp(28px,5vw,44px)}
+  .hero p{margin:6px 0;line-height:1.5}
+  .badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+  .badge{background:rgba(255,255,255,.18);padding:8px 12px;border-radius:999px;font-weight:700;font-size:14px}
+  .progress-shell{
+    position:sticky;top:0;z-index:10;margin:18px 0;
+    background:rgba(244,248,255,.94);backdrop-filter:blur(10px);padding:12px 0;
+  }
+  .progress-card{
+    background:white;border:1px solid var(--line);border-radius:16px;padding:12px 14px;
+    display:flex;gap:14px;align-items:center;box-shadow:0 8px 24px rgba(15,23,42,.06)
+  }
+  .bar{height:12px;background:#e7edf8;border-radius:999px;overflow:hidden;flex:1}
+  .fill{height:100%;width:0;background:linear-gradient(90deg,#2563eb,#7c3aed,#db2777);transition:.25s}
+  .score{font-weight:800;white-space:nowrap}
+  .section-title{margin:28px 0 12px;font-size:24px}
+  .question{
+    background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;
+    margin:14px 0;box-shadow:0 8px 22px rgba(30,41,59,.05)
+  }
+  .question.correct{border-color:#86efac;background:#f0fdf4}
+  .question.incorrect{border-color:#fecaca;background:#fef2f2}
+  .qtop{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+  .tag{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--purple)}
+  .question h3{font-size:18px;line-height:1.45;margin:8px 0 14px}
+  .answer-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  input{
+    width:min(260px,100%);padding:12px 14px;border:2px solid #cbd5e1;border-radius:12px;
+    font-size:16px;outline:none;background:white
+  }
+  input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+  button{
+    border:none;border-radius:12px;padding:12px 16px;font-size:15px;font-weight:800;cursor:pointer
+  }
+  .check{background:var(--blue);color:white}
+  .check:hover{filter:brightness(.96)}
+  .unit{font-weight:800;color:var(--muted)}
+  .feedback{display:none;margin-top:14px;padding:12px 14px;border-radius:12px;line-height:1.5}
+  .feedback.show{display:block}
+  .feedback.good{background:#dcfce7;color:#14532d}
+  .feedback.bad{background:#fee2e2;color:#7f1d1d}
+  .calc{margin-top:6px;font-size:14px}
+  .footer-actions{
+    display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:28px 0 48px
+  }
+  .submit{background:linear-gradient(90deg,#1d4ed8,#7c3aed);color:white;padding:14px 22px}
+  .reset{background:#e2e8f0;color:#1e293b;padding:14px 22px}
+  #final{
+    display:none;background:white;border:1px solid var(--line);border-radius:22px;padding:24px;margin:24px 0;
+    text-align:center;box-shadow:0 14px 34px rgba(15,23,42,.08)
+  }
+  #final h2{font-size:32px;margin:0 0 8px}
+  .small{color:var(--muted);font-size:14px}
+  @media(max-width:600px){
+    .wrap{padding:14px}.hero{padding:22px}.question{padding:16px}
+    .progress-card{align-items:flex-start;flex-direction:column}
+    .bar{width:100%}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <h1>Interactive Dosage Calculations</h1>
+    <p>Practice measurement conversions, medication dosage calculations, IV flow rates, and safe rounding.</p>
+    <p><strong>Directions:</strong> Enter only the number unless the question asks for a specific unit. Use the rounding direction written in each question.</p>
+    <div class="badges">
+      <span class="badge">25 Questions</span>
+      <span class="badge">Instant Feedback</span>
+      <span class="badge">Worked Rationales</span>
+      <span class="badge">Final Score</span>
+    </div>
+  </div>
+
+  <div class="progress-shell">
+    <div class="progress-card">
+      <strong>Progress</strong>
+      <div class="bar"><div class="fill" id="progressFill"></div></div>
+      <div class="score" id="scoreText">0 / 25 checked</div>
+    </div>
+  </div>
+
+  <div id="quiz"></div>
+
+  <div class="footer-actions">
+    <button class="submit" onclick="finishQuiz()">Submit Final Score</button>
+    <button class="reset" onclick="resetQuiz()">Reset Quiz</button>
+  </div>
+
+  <div id="final"></div>
+</div>
+
+<script>
+const questions = [
+  {section:"Measurement", prompt:"A client weighs 176 lb. Convert the weight to kilograms. Round to the nearest whole number.", answer:80, unit:"kg", tol:.01, rationale:"176 ÷ 2.2 = 80 kg."},
+  {section:"Measurement", prompt:"Convert 2.5 L to milliliters.", answer:2500, unit:"mL", tol:.01, rationale:"2.5 × 1000 = 2500 mL."},
+  {section:"Measurement", prompt:"Convert 750 mg to grams. Round to the nearest hundredth if needed.", answer:.75, unit:"g", tol:.001, rationale:"750 ÷ 1000 = 0.75 g."},
+  {section:"Measurement", prompt:"Convert 0.45 g to milligrams.", answer:450, unit:"mg", tol:.01, rationale:"0.45 × 1000 = 450 mg."},
+  {section:"Measurement", prompt:"A medication order calls for 3 teaspoons of liquid medication. How many milliliters is this?", answer:15, unit:"mL", tol:.01, rationale:"1 tsp = 5 mL, so 3 × 5 = 15 mL."},
+  {section:"Measurement", prompt:"A client is instructed to take 2 tablespoons of a liquid medication. How many milliliters should the client take?", answer:30, unit:"mL", tol:.01, rationale:"1 tbsp = 15 mL, so 2 × 15 = 30 mL."},
+  {section:"Measurement", prompt:"A client drinks 120 mL of juice. Approximately how many ounces is this?", answer:4, unit:"oz", tol:.01, rationale:"30 mL ≈ 1 oz, so 120 ÷ 30 = 4 oz."},
+
+  {section:"Dosage", prompt:"The provider orders 500 mg of a medication. Tablets available contain 250 mg each. How many tablets should the nurse administer?", answer:2, unit:"tablets", tol:.01, rationale:"500 ÷ 250 = 2 tablets."},
+  {section:"Dosage", prompt:"The provider orders 375 mg. The medication is available as 250 mg per 5 mL. How many milliliters should the nurse administer? Round to the nearest tenth if needed.", answer:7.5, unit:"mL", tol:.01, rationale:"(375 ÷ 250) × 5 = 7.5 mL."},
+  {section:"Dosage", prompt:"The provider orders 0.4 mg. Tablets available contain 200 mcg each. How many tablets should the nurse administer?", answer:2, unit:"tablets", tol:.01, rationale:"0.4 mg = 400 mcg. 400 ÷ 200 = 2 tablets."},
+  {section:"Dosage", prompt:"The provider orders 1.2 g of a medication. Capsules available contain 400 mg each. How many capsules should the nurse administer?", answer:3, unit:"capsules", tol:.01, rationale:"1.2 g = 1200 mg. 1200 ÷ 400 = 3 capsules."},
+  {section:"Dosage", prompt:"The provider orders 650 mg of acetaminophen. Tablets available contain 325 mg each. How many tablets should the nurse administer?", answer:2, unit:"tablets", tol:.01, rationale:"650 ÷ 325 = 2 tablets."},
+  {section:"Dosage", prompt:"The provider orders 150 mg. The medication is available as 75 mg per 5 mL. How many milliliters should the nurse administer?", answer:10, unit:"mL", tol:.01, rationale:"(150 ÷ 75) × 5 = 10 mL."},
+  {section:"Dosage", prompt:"The provider orders 0.25 mg. Tablets available contain 0.125 mg each. How many tablets should the nurse administer?", answer:2, unit:"tablets", tol:.01, rationale:"0.25 ÷ 0.125 = 2 tablets."},
+  {section:"Dosage", prompt:"The provider orders 1.5 g of a medication. Tablets available contain 500 mg each. How many tablets should the nurse administer?", answer:3, unit:"tablets", tol:.01, rationale:"1.5 g = 1500 mg. 1500 ÷ 500 = 3 tablets."},
+  {section:"Dosage", prompt:"The provider orders 225 mg. The medication concentration is 150 mg/mL. How many milliliters should the nurse administer? Round to the nearest tenth if needed.", answer:1.5, unit:"mL", tol:.01, rationale:"225 ÷ 150 = 1.5 mL."},
+  {section:"Dosage", prompt:"The provider orders 80 mg. The vial contains 40 mg per 2 mL. How many milliliters should the nurse administer?", answer:4, unit:"mL", tol:.01, rationale:"(80 ÷ 40) × 2 = 4 mL."},
+
+  {section:"IV Calculations", prompt:"An IV contains 1000 mL and must infuse over 8 hours. What rate should the nurse set on the infusion pump?", answer:125, unit:"mL/hr", tol:.01, rationale:"1000 ÷ 8 = 125 mL/hr."},
+  {section:"IV Calculations", prompt:"An IV contains 1500 mL and is prescribed to infuse over 12 hours. What rate should the nurse set on the pump?", answer:125, unit:"mL/hr", tol:.01, rationale:"1500 ÷ 12 = 125 mL/hr."},
+  {section:"IV Calculations", prompt:"A 500 mL IV is to infuse over 4 hours. What rate should the nurse set on the infusion pump?", answer:125, unit:"mL/hr", tol:.01, rationale:"500 ÷ 4 = 125 mL/hr."},
+  {section:"IV Calculations", prompt:"A 100 mL IV medication is to infuse over 30 minutes. What pump rate should the nurse set?", answer:200, unit:"mL/hr", tol:.01, rationale:"30 minutes = 0.5 hour. 100 ÷ 0.5 = 200 mL/hr."},
+
+  {section:"Rounding", prompt:"A calculation results in 2.666 mL. Round to the nearest tenth.", answer:2.7, unit:"mL", tol:.0001, rationale:"The hundredths digit is 6, so 2.666 rounds to 2.7 mL."},
+  {section:"Rounding", prompt:"A calculation results in 0.746 mL. Round to the nearest hundredth.", answer:.75, unit:"mL", tol:.0001, rationale:"The thousandths digit is 6, so 0.746 rounds to 0.75 mL."},
+  {section:"Rounding", prompt:"An IV drop-rate calculation results in 7.6 gtt/min. Round to the nearest whole drop.", answer:8, unit:"gtt/min", tol:.0001, rationale:"A drop rate is rounded to a whole number. 7.6 rounds to 8 gtt/min."},
+  {section:"Rounding", prompt:"A syringe calculation results in 1.2345 mL. Round to the nearest thousandth.", answer:1.235, unit:"mL", tol:.0001, rationale:"The fourth decimal digit is 5, so 1.2345 rounds to 1.235 mL."}
+];
+
+let checked = Array(questions.length).fill(false);
+let correct = Array(questions.length).fill(false);
+
+function makeQuiz(){
+  const quiz = document.getElementById('quiz');
+  let lastSection = "";
+  questions.forEach((q,i)=>{
+    if(q.section !== lastSection){
+      const h = document.createElement('h2');
+      h.className = 'section-title';
+      h.textContent = q.section;
+      quiz.appendChild(h);
+      lastSection = q.section;
+    }
+    const card = document.createElement('div');
+    card.className='question';
+    card.id='q'+i;
+    card.innerHTML = `
+      <div class="qtop">
+        <div class="tag">${q.section}</div>
+        <div class="small">Question ${i+1} of 25</div>
+      </div>
+      <h3>${q.prompt}</h3>
+      <div class="answer-row">
+        <input id="a${i}" type="number" step="any" inputmode="decimal" placeholder="Enter answer" aria-label="Answer for question ${i+1}">
+        <span class="unit">${q.unit}</span>
+        <button class="check" onclick="checkAnswer(${i})">Check Answer</button>
+      </div>
+      <div id="f${i}" class="feedback"></div>
+    `;
+    quiz.appendChild(card);
+  });
+}
+
+function checkAnswer(i){
+  const inp = document.getElementById('a'+i);
+  const fb = document.getElementById('f'+i);
+  const card = document.getElementById('q'+i);
+  if(inp.value.trim()===""){
+    fb.className='feedback show bad';
+    fb.innerHTML='Enter a number before checking your answer.';
+    return;
+  }
+  const val = Number(inp.value);
+  const q = questions[i];
+  const isCorrect = Math.abs(val - q.answer) <= q.tol;
+  checked[i] = true;
+  correct[i] = isCorrect;
+  card.classList.remove('correct','incorrect');
+  card.classList.add(isCorrect ? 'correct':'incorrect');
+  fb.className='feedback show ' + (isCorrect ? 'good':'bad');
+  fb.innerHTML = isCorrect
+    ? `<strong>Correct.</strong><div class="calc">${q.rationale}</div>`
+    : `<strong>Not quite.</strong> The correct answer is <strong>${q.answer} ${q.unit}</strong>.<div class="calc">${q.rationale}</div>`;
+  updateProgress();
+}
+
+function updateProgress(){
+  const count = checked.filter(Boolean).length;
+  document.getElementById('progressFill').style.width = (count/questions.length*100)+'%';
+  document.getElementById('scoreText').textContent = `${count} / 25 checked`;
+}
+
+function finishQuiz(){
+  questions.forEach((_,i)=>{
+    if(!checked[i] && document.getElementById('a'+i).value.trim()!=="") checkAnswer(i);
+  });
+  const answered = checked.filter(Boolean).length;
+  const pts = correct.filter(Boolean).length;
+  const pct = Math.round((pts/questions.length)*100);
+  const box = document.getElementById('final');
+  let message = pct >= 90 ? "Excellent dosage-calculation performance."
+              : pct >= 80 ? "Strong work. Review any missed calculations."
+              : pct >= 70 ? "Good start. Review the rationales and retry."
+              : "Review the worked calculations, then reset and try again.";
+  box.style.display='block';
+  box.innerHTML = `
+    <h2>${pts} / 25 — ${pct}%</h2>
+    <p>${message}</p>
+    <p class="small">${answered} question(s) were checked. Unanswered items count as incorrect in the final score.</p>
+  `;
+  box.scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function resetQuiz(){
+  if(!confirm("Reset all answers and start again?")) return;
+  checked.fill(false); correct.fill(false);
+  questions.forEach((_,i)=>{
+    document.getElementById('a'+i).value='';
+    document.getElementById('f'+i).className='feedback';
+    document.getElementById('f'+i).innerHTML='';
+    document.getElementById('q'+i).classList.remove('correct','incorrect');
+  });
+  document.getElementById('final').style.display='none';
+  updateProgress();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+makeQuiz();
+</script>
+</body>
+</html>
